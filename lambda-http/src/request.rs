@@ -328,6 +328,53 @@ where
 impl<'a> From<LambdaRequest<'a>> for http::Request<Body> {
     fn from(value: LambdaRequest<'_>) -> Self {
         match value {
+            LambdaRequest::Lambda {
+                raw_path,
+                raw_query_string,
+                headers,
+                query_string_parameters,
+                path_parameters,
+                stage_variables,
+                body,
+                is_base64_encoded,
+                request_context,
+                ..
+            } => {
+                let builder = http::Request::builder()
+                    .method(request_context.http.method.as_ref())
+                    .uri({
+                        let mut url = format!(
+                            "{}://{}{}",
+                            headers
+                                .get("X-Forwarded-Proto")
+                                .and_then(|val| val.to_str().ok())
+                                .unwrap_or_else(|| "https"),
+                            headers
+                                .get(http::header::HOST)
+                                .and_then(|val| val.to_str().ok())
+                                .unwrap_or_else(|| request_context.domain_name.as_ref()),
+                            raw_path
+                        );
+                        if !raw_query_string.is_empty() {
+                            url.push('?');
+                            url.push_str(raw_query_string.as_ref());
+                        }
+                        url
+                    })
+                    .extension(QueryStringParameters(query_string_parameters))
+                    .extension(PathParameters(path_parameters))
+                    .extension(StageVariables(stage_variables))
+                    .extension(RequestContext::ApiGatewayV2(request_context));
+
+                let mut req = builder
+                    .body(body.map_or_else(Body::default, |b| Body::from_maybe_encoded(is_base64_encoded, b)))
+                    .expect("failed to build request");
+
+                // no builder method that sets headers in batch
+                mem::replace(req.headers_mut(), headers);
+
+                req
+            }
             LambdaRequest::ApiGatewayV2 {
                 raw_path,
                 raw_query_string,
