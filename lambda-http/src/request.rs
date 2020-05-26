@@ -24,6 +24,26 @@ use crate::{
 #[serde(untagged)]
 pub enum LambdaRequest<'a> {
     #[serde(rename_all = "camelCase")]
+    Lambda {
+        version: Cow<'a, str>,
+        route_key: Cow<'a, str>,
+        raw_path: Cow<'a, str>,
+        raw_query_string: Cow<'a, str>,
+        cookies: Option<Vec<Cow<'a, str>>>,
+        #[serde(deserialize_with = "deserialize_headers")]
+        headers: http::HeaderMap,
+        #[serde(default)]
+        query_string_parameters: StrMap,
+        #[serde(default)]
+        path_parameters: StrMap,
+        #[serde(default)]
+        stage_variables: StrMap,
+        body: Option<Cow<'a, str>>,
+        #[serde(default)]
+        is_base64_encoded: bool,
+        request_context: ApiGatewayV2RequestContext,
+    },
+    #[serde(rename_all = "camelCase")]
     ApiGatewayV2 {
         version: Cow<'a, str>,
         route_key: Cow<'a, str>,

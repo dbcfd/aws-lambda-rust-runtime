@@ -41,6 +41,7 @@ use anyhow::Error;
 use client::Client;
 use futures::stream::{Stream, StreamExt};
 use genawaiter::{sync::gen, yield_};
+use log::*;
 pub use lambda_attributes::lambda;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -211,7 +212,10 @@ where
 
         let ctx: LambdaCtx = LambdaCtx::try_from(parts.headers)?;
         let body = hyper::body::to_bytes(body).await?;
-        let body = serde_json::from_slice(&body)?;
+        let body = serde_json::from_slice(&body).map_err(|e| {
+            error!("Failed to convert body: {}", String::from_utf8_lossy(&body));
+            e
+        })?;
 
         let request_id = &ctx.request_id.clone();
         let f = INVOCATION_CTX.scope(ctx, { handler.call(body) });

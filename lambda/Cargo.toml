@@ -12,6 +12,7 @@ simulated = []
 derive = ["lambda-attributes"]
 
 [dependencies]
+log = "0.4"
 tokio = { version = "0.2.4", features = ["full"] }
 hyper = "0.13"
 serde = { version = "1", features = ["derive"] }
